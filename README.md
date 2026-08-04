@@ -1,20 +1,32 @@
-# agitalo-suave-cms
+# 🗄️ agitalo-suave-cms
 
-Headless CMS (Strapi v5) para el contenido de [Agítalo Suave](https://agitalosuave.com).
+> CMS headless ([Strapi 5](https://strapi.io)) que alimenta el sitio **Agítalo Suave** ([agitalosuave.com](https://agitalosuave.com)). Exponen el blog y las páginas legales vía REST API para que el build del front (Astro) los consuma.
 
-- **Base de datos:** Supabase (PostgreSQL)
-- **Media Library:** Cloudinary, con conversión automática de jpeg/png → **AVIF**
-- **Contenido:** posts de blog + páginas legales. El cuerpo se guarda como **markdown+html** (campo richtext), preservando las entradas tal como están hoy.
-- **Objetivo:** exponer el contenido vía REST API para que el build de `agitalo-suave` (Astro) lo consuma.
+## ✨ Características
 
-## Requisitos
+- **Datos en Supabase** — PostgreSQL gestionado en la nube (sin disco local).
+- **Imágenes en Cloudinary** — la Media Library convierte jpeg/png → **AVIF** automáticamente.
+- **Contenido rico** — el cuerpo se guarda como **markdown+html** (campo richtext), preservando las entradas tal cual.
+- **API pública** — `blog` y `legal` legibles por el rol Public (permisos sembrados en el bootstrap).
+- **Publicación automática** — webhook hacia el build hook de Netlify para regenerar el front al crear/editar/borrar entradas.
 
-- Node.js 22+ (LTS)
+## 🧱 Stack
+
+| Capa | Tecnología |
+| --- | --- |
+| Framework | [Strapi](https://strapi.io) 5 |
+| Base de datos | Supabase (PostgreSQL) vía connection string |
+| Media | Cloudinary (provider `@strapi/provider-upload-cloudinary`) |
+| Deploy | Render (blueprint `render.yaml`) |
+
+## ⚙️ Requisitos
+
+- Node.js 20–26 (LTS)
 - pnpm 10+
 - Proyecto Supabase con su connection string
 - Cuenta Cloudinary con API key/secret
 
-## Configuración inicial
+## 🚀 Configuración inicial
 
 1. Instalar dependencias:
 
@@ -22,20 +34,18 @@ Headless CMS (Strapi v5) para el contenido de [Agítalo Suave](https://agitalosu
    pnpm install
    ```
 
-2. Copiar `.env.example` a `.env` y completar los valores:
+2. Copiar `.env.example` a `.env` y completar valores:
 
    ```sh
    cp .env.example .env
    ```
 
-   Variables requeridas:
-
    | Variable | Descripción |
    | --- | --- |
    | `DATABASE_URL` | Connection string de Supabase (directa o pooler). |
-   | `CLOUDINARY_NAME` | Cloud name (ej. `ddl7angox`). |
-   | `CLOUDINARY_KEY` | API Key de Cloudinary. |
-   | `CLOUDINARY_SECRET` | API Secret de Cloudinary. |
+   | `DATABASE_SSL` | `true` (Supabase exige SSL). |
+   | `CLOUDINARY_NAME` | Cloud name de tu cuenta (ej. `mi-cuenta`). |
+   | `CLOUDINARY_KEY` / `CLOUDINARY_SECRET` | Credenciales de Cloudinary. |
    | `APP_KEYS`, `JWT_SECRET`, `ADMIN_JWT_SECRET`, `API_TOKEN_SALT`, `TRANSFER_TOKEN_SALT`, `ENCRYPTION_KEY` | Secrets (genera con `openssl rand -base64 32`). |
 
 3. Arrancar en desarrollo:
@@ -44,56 +54,44 @@ Headless CMS (Strapi v5) para el contenido de [Agítalo Suave](https://agitalosu
    pnpm develop
    ```
 
-   - Admin en `http://localhost:1337/admin` (crear el usuario administrador en la primera visita).
-   - Al arrancar, el bootstrap habilita automáticamente los permisos de lectura pública de `blog` y `legal`.
+   - Admin en `http://localhost:1337/admin`.
+   - Al arrancar, el bootstrap habilita los permisos de lectura pública de `blog` y `legal`.
 
-4. (Opcional) **API token**: Settings → API Tokens → Create New Token → tipo `Read-only` (o `Full-access` para el script de importación).
-
-## Content types
+## 📝 Content types
 
 | Collection | Campos principales |
 | --- | --- |
-| `blog` | `title`, `slug`, `type` (`receta\|bitacora\|tecnica\|tip`), `date`, `updated`, `excerpt`, `tags` (json), `image` (media), `headerImage` (media), `ingredients` (json), `steps` (json), `draft`, `featured`, `content` (richtext markdown) |
+| `blog` | `title`, `slug`, `type` (`receta` · `bitacora` · `tecnica` · `tip`), `date`, `updated`, `excerpt`, `tags` (json), `image`/`headerImage` (media), `ingredients` (json), `steps` (json), `draft`, `featured`, `content` (richtext markdown) |
 | `legal` | `title`, `slug`, `description`, `date`, `draft`, `content` (richtext markdown) |
 
-El mapeo es 1:1 con los esquemas actuales de `agitalo-suave` (`src/schemas/blog.ts` y `src/schemas/legal.ts`).
+El mapeo es 1:1 con los schemas del front (`agitalo-suave/src/schemas/`).
 
-## Conversión a AVIF en Cloudinary
+## 🖼️ Conversión a AVIF en Cloudinary
 
-En `config/plugins.ts`, el provider de upload configura `actionOptions.upload` con `format: 'avif'` y `quality: 'auto'`. Toda imagen (jpeg/png/etc.) subida por la Media Library se almacena en Cloudinary como **AVIF**; ese `.avif` es el que devuelve el API.
+En `config/plugins.ts`, el provider de upload configura `actionOptions.upload` con `format: 'avif'` y `quality: 'auto'`. Toda imagen (jpeg/png/etc.) subida por la Media Library se almacena como **AVIF**; ese `.avif` es el que devuelve la API.
 
-## Migración del contenido actual
-
-El script `scripts/import-content.mjs` importa (idempotente por `slug`) los `.md` del blog y los `.mdx` legales de `../agitalo-suave/src/content`:
-
-```sh
-# Con Strapi corriendo y un API token full-access:
-CMS_TOKEN=xxxxxxxx node scripts/import-content.mjs
-
-# Ver qué haría sin tocar nada:
-CMS_TOKEN=xxxxxxxx DRY_RUN=1 node scripts/import-content.mjs
-```
-
-Las imágenes existentes (ya en Cloudinary como `.avif`) se re-suben a la Media Library y se enlazan a cada entrada.
-
-## API (para el build de agitalo-suave)
+## 🔌 API
 
 Endpoints públicos (rol Public) o con `Authorization: Bearer <token>`:
 
 - `GET /api/blogs` y `GET /api/blogs/:documentId`
 - `GET /api/legals` y `GET /api/legals/:documentId`
 
-Ejemplo de filtrado:
+Filtrado:
 
 ```
 GET /api/blogs?filters[type][$eq]=receta&sort[0]=date:desc&pagination[page]=1&pageSize=12
 ```
 
-El cuerpo `content` llega como markdown+html; el front lo renderiza con su parser markdown actual.
+El cuerpo `content` llega como markdown+html; el loader del front lo renderiza con el parser de Astro.
 
-## Despliegue (Render)
+## 🔁 Publicación automática del front
 
-El repo incluye un blueprint `render.yaml`: en Render, **New → Blueprint** conectando el repo crea el servicio automáticamente.
+Al crear, editar o borrar una entrada (eventos de webhook) el CMS notifica el **build hook de Netlify**, regenerando el sitio. Configuración en **Settings → Webhooks** del admin.
+
+## 🌐 Despliegue (Render)
+
+El repo incluye el blueprint `render.yaml`: en Render, **New → Blueprint** conectando el repo crea el servicio automáticamente.
 
 1. New → Blueprint y conectar el repo.
 2. El blueprint define el build (`corepack enable && NODE_ENV=development pnpm install --frozen-lockfile && pnpm build`) y el start (`pnpm start`).
@@ -101,13 +99,16 @@ El repo incluye un blueprint `render.yaml`: en Render, **New → Blueprint** con
    `DATABASE_URL`, `APP_KEYS`, `API_TOKEN_SALT`, `ADMIN_JWT_SECRET`, `JWT_SECRET`, `TRANSFER_TOKEN_SALT`, `ENCRYPTION_KEY`, `CLOUDINARY_NAME`, `CLOUDINARY_KEY`, `CLOUDINARY_SECRET`.
 4. Añade el custom domain (ej. `cms.agitalosuave.com`) en Service Settings.
 
-**Importante:** la instancia es stateless — los datos viven en Supabase y los archivos en Cloudinary, así que no necesita disco persistente. El build usa `NODE_ENV=development` solo para instalar devDependencies (Strapi necesita TypeScript para compilar); en runtime se corre con `NODE_ENV=production`.
+> **Importante:** la instancia es **stateless** — los datos viven en Supabase y los archivos en Cloudinary, así que no necesita disco persistente. El build usa `NODE_ENV=development` solo para instalar devDependencies (Strapi necesita TypeScript para compilar); en runtime se corre con `NODE_ENV=production`.
 
-## Comandos
+## 🧞 Comandos
 
 | Comando | Descripción |
 | --- | --- |
 | `pnpm develop` | Dev con hot reload |
 | `pnpm build` | Compila el admin panel |
 | `pnpm start` | Corre la app (build previo requerido) |
-| `node scripts/import-content.mjs` | Importa el contenido de agitalo-suave |
+
+---
+
+Hecho con 🧉 y coctelera por **Agítalo Suave** — [agitalosuave.com](https://agitalosuave.com)
