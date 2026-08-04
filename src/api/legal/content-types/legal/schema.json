@@ -1,0 +1,39 @@
+{
+  "kind": "collectionType",
+  "collectionName": "legals",
+  "info": {
+    "singularName": "legal",
+    "pluralName": "legals",
+    "displayName": "Legal",
+    "description": "Paginas legales e informativas de Agitalo Suave"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "title": {
+      "type": "string",
+      "required": true
+    },
+    "slug": {
+      "type": "string",
+      "required": true,
+      "unique": true
+    },
+    "description": {
+      "type": "text"
+    },
+    "date": {
+      "type": "date"
+    },
+    "draft": {
+      "type": "boolean",
+      "default": false
+    },
+    "content": {
+      "type": "richtext",
+      "required": true
+    }
+  }
+}
